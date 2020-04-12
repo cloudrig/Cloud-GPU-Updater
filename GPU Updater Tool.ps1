@@ -1,6 +1,15 @@
+﻿param (
+    [bool]$Confirm = $true
+)
 #version=001
- #sets invoke-webrequest to use TLS1.2 by default
+#sets invoke-webrequest to use TLS1.2 by default
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+function waitForUserInput {
+    If ($Confirm) {
+        Read-Host "Press any key to exit..."
+    }
+}
 
 function installedGPUID {
 #queries WMI to get DeviceID of the installed NVIDIA GPU
@@ -171,7 +180,7 @@ else{$gpu.Supported = "No"; $gpu.Name = webName}
 function checkOSSupport {
 #quits if OS isn't supported
 If ($system.OS_Supported -eq $false) {$app.FailOS
-Read-Host "Press any key to exit..."
+waitForUserInput
 Exit
 }
 Else {}
@@ -181,7 +190,7 @@ function checkGPUSupport{
 #quits if GPU isn't supported
 If ($gpu.Supported -eq "No") {
 $app.FailGPU
-Read-Host "Press any key to exit..."
+waitForUserInput
 Exit
 }
 ElseIf ($gpu.Supported -eq "UnOfficial") {
@@ -229,15 +238,22 @@ if ($gpu.Update_Available -eq $true) {$app.success
 startUpdate}
 Else {
 $app.UpToDate
-Read-Host "Press any key to exit..."
+waitForUserInput
 Exit
 }
 }
 
 function startUpdate { 
 #Gives user an option to start the update, and sends messages to the user
-Write-output "Update now? - (!) Machine will automatically reboot if required (!)"
-$ReadHost = Read-Host "(Y/N)"
+If ($Confirm) {
+    Write-output "Update now? - (!) Machine will automatically reboot if required (!)"
+    $ReadHost = Read-Host "(Y/N)"
+}
+Else {
+    $ReadHost = "Y"
+}
+
+
     Switch ($ReadHost) 
      { 
        Y {Write-Output `n "Downloading Driver"
@@ -424,6 +440,8 @@ $ShortCut.Description = "Create NVSMI shortcut";
 $ShortCut.Save()
 }
 
+
+
 #starts 
 $app.Parsec
 "Loading..."
@@ -436,5 +454,7 @@ checkOSSupport
 checkGPUSupport
 querygpu
 checkDriverInstalled
-ConfirmCharges
+If ($Confirm) {
+    ConfirmCharges
+}
 checkUpdates
