@@ -29,16 +29,6 @@ function osVersion {
 }
 
 Function G4DN {
-if ((Get-AWSCredential -ProfileName "$args") -ne $null) {
-    }
-Else {
-    Write-host "The G4dn instance requires a non-public driver, you will need to create or use an existing Access key found here"
-    Write-host "https://console.aws.amazon.com/iam/home?/security_credentials#/security_credentials" -BackgroundColor Green -ForegroundColor Black
-    $accesskey = Read-Host "Enter your AWS Access key"
-    $secretkey = Read-Host "Enter your AWS Secret Key"
-    Set-AWSCredentials -AccessKey $accesskey -SecretKey $secretkey -StoreAs "$args"
-    }
-
 $Bucket = "nvidia-gaming"
 $KeyPrefix = "windows/latest"
 $S3Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region us-east-1 -ProfileName "$args"
@@ -403,22 +393,22 @@ Else {
 }
 
 function setnvsmi {
-#downloads script to set GPU to WDDM if required
-(New-Object System.Net.WebClient).DownloadFile("https://raw.githubusercontent.com/cloudrig/Cloud-GPU-Updater/master/Additional%20Files/NVSMI.ps1", $($system.Path) + "\NVSMI.ps1")
-Unblock-File -Path "$($system.Path)\NVSMI.ps1"
+    #downloads script to set GPU to WDDM if required
+    (New-Object System.Net.WebClient).DownloadFile("https://raw.githubusercontent.com/cloudrig/Cloud-GPU-Updater/master/Additional%20Files/NVSMI.ps1", $($system.Path) + "\NVSMI.ps1")
+    Unblock-File -Path "$($system.Path)\NVSMI.ps1"
 }
 
 function setnvsmi-shortcut{
-#creates startup shortcut that will start the script downloaded in setnvsmi
-Write-Output "Create NVSMI shortcut"
-$Shell = New-Object -ComObject ("WScript.Shell")
-$ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\NVSMI.lnk")
-$ShortCut.TargetPath="powershell.exe"
-$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\NVSMI.ps1"'
-$ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
-$ShortCut.WindowStyle = 0;
-$ShortCut.Description = "Create NVSMI shortcut";
-$ShortCut.Save()
+    #creates startup shortcut that will start the script downloaded in setnvsmi
+    Write-Output "Create NVSMI shortcut"
+    $Shell = New-Object -ComObject ("WScript.Shell")
+    $ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\NVSMI.lnk")
+    $ShortCut.TargetPath="powershell.exe"
+    $ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\NVSMI.ps1"'
+    $ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
+    $ShortCut.WindowStyle = 0;
+    $ShortCut.Description = "Create NVSMI shortcut";
+    $ShortCut.Save()
 }
 
 
