@@ -1,6 +1,9 @@
 ﻿param (
     [string]$Confirm = "true"
 )
+
+$region = (Invoke-RestMethod http://169.254.169.254/latest/dynamic/instance-identity/document).region
+
 #version=001
 #sets invoke-webrequest to use TLS1.2 by default
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -31,7 +34,7 @@ function osVersion {
 Function G4DN {
 $Bucket = "nvidia-gaming"
 $KeyPrefix = "windows/latest"
-$S3Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region us-east-1 -ProfileName "$args"
+$S3Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region $region
 $S3Objects.key | select-string -Pattern '.zip' 
 }
 
