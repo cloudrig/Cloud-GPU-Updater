@@ -1,12 +1,12 @@
 ﻿param (
-    [bool]$Confirm = $true
+    [string]$Confirm = "true"
 )
 #version=001
 #sets invoke-webrequest to use TLS1.2 by default
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function waitForUserInput {
-    If ($Confirm) {
+    If ($Confirm -eq "true") {
         Read-Host "Press any key to exit..."
     }
 }
@@ -245,7 +245,7 @@ Exit
 
 function startUpdate { 
 #Gives user an option to start the update, and sends messages to the user
-If ($Confirm) {
+If ($Confirm -eq "true") {
     Write-output "Update now? - (!) Machine will automatically reboot if required (!)"
     $ReadHost = Read-Host "(Y/N)"
 }
@@ -284,7 +284,7 @@ remove-item "$($system.Path)\ExtractedGPUDriver" -Recurse
 }
 Elseif ((($gpu.supported -eq "UnOfficial")  -and ($gpu.cloudprovider -eq "Google"))-eq $true) {
 $googlestoragedriver =([xml](invoke-webrequest -uri https://storage.googleapis.com/nvidia-drivers-us-public).content).listbucketresult.contents.key  -like  "*server2016*.exe" | select -last 1
-(New-Object System.Net.WebClient).DownloadFile($("https://storage.googleapis.com/nvidia-drivers-us-public/" + $googlestoragedriver), "C:\ParsecTemp\Drivers\GoogleGRID.exe")
+(New-Object System.Net.WebClient).DownloadFile($("https://storage.googleapis.com/nvidia-drivers-us-public/" + $googlestoragedriver), "C:\CloudRIGTemp\Drivers\GoogleGRID.exe")
 }
 Elseif((($gpu.Supported -eq "yes") -and ($gpu.cloudprovider -eq "aws") -and ($gpu.Device_ID -ne "DEV_118A") -and ($gpu.Device_ID -ne "DEV_1EB8")) -eq $true){
 $s3path = $(([xml](invoke-webrequest -uri https://ec2-windows-nvidia-drivers.s3.amazonaws.com).content).listbucketresult.contents.key -like  "latest/*server2016*") 
@@ -339,8 +339,8 @@ Write-Output "Generic Non PNP Monitor"
 $Shell = New-Object -ComObject ("WScript.Shell")
 $ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\DisableSecondMonitor.lnk")
 $ShortCut.TargetPath="powershell.exe"
-$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\ParsecTemp\Drivers\DisableSecondMonitor.ps1"'
-$ShortCut.WorkingDirectory = "C:\ParsecTemp\Drivers";
+$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\DisableSecondMonitor.ps1"'
+$ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
 $ShortCut.WindowStyle = 0;
 $ShortCut.Description = "DisableSecondMonitor";
 $ShortCut.Save()
@@ -364,32 +364,13 @@ $url = @{}
 $download = @{}
 $app = @{}
 $gpu = @{Device_ID = installedGPUID}
-$system = @{Valid_NVIDIA_Driver = ValidDriver; OS_Version = osVersion; OS_Reboot_Required = RequiresReboot; Date = get-date; Path = "C:\ParsecTemp\Drivers"}
+$system = @{Valid_NVIDIA_Driver = ValidDriver; OS_Version = osVersion; OS_Reboot_Required = RequiresReboot; Date = get-date; Path = "C:\CloudRIGTemp\Drivers"}
 
 
-$app.Parsec = Write-Host -foregroundcolor red "
-                                                           
-                   ((//////                                
-                 #######//////                             
-                 ##########(/////.                         
-                 #############(/////,                      
-                 #################/////*                   
-                 #######/############////.                 
-                 #######/// ##########////                 
-                 #######///    /#######///                 
-                 #######///     #######///                 
-                 #######///     #######///                 
-                 #######////    #######///                 
-                 ########////// #######///                 
-                 ###########////#######///                 
-                   ####################///                 
-                       ################///                 
-                         *#############///                 
-                             ##########///                 
-                                ######(*                   
-                                                           
+$app.CloudRIG = Write-Host -foregroundcolor red "
 
-                  ~Parsec GPU Updater~
+      ~CloudRIG GPU Updater (based on Parsec GPU updater)~
+
 " 
 
 function rebootLogic {
@@ -433,8 +414,8 @@ Write-Output "Create NVSMI shortcut"
 $Shell = New-Object -ComObject ("WScript.Shell")
 $ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\NVSMI.lnk")
 $ShortCut.TargetPath="powershell.exe"
-$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\ParsecTemp\Drivers\NVSMI.ps1"'
-$ShortCut.WorkingDirectory = "C:\ParsecTemp\Drivers";
+$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\NVSMI.ps1"'
+$ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
 $ShortCut.WindowStyle = 0;
 $ShortCut.Description = "Create NVSMI shortcut";
 $ShortCut.Save()
@@ -443,7 +424,7 @@ $ShortCut.Save()
 
 
 #starts 
-$app.Parsec
+$app.CloudRIG
 "Loading..."
 prepareEnvironment
 queryOS
@@ -454,7 +435,7 @@ checkOSSupport
 checkGPUSupport
 querygpu
 checkDriverInstalled
-If ($Confirm) {
+If ($Confirm -eq "true") {
     ConfirmCharges
 }
 checkUpdates
