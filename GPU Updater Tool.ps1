@@ -266,11 +266,10 @@ if((($gpu.Supported -eq "UnOfficial") -and ($gpu.cloudprovider -eq "aws") -and (
 $S3Path = G4DN GPUUpdateG4Dn
 (New-Object System.Net.WebClient).DownloadFile($("https://nvidia-gaming.s3.amazonaws.com/" + $s3path), $($system.Path) + "\NVIDIA_" + $($gpu.web_driver) + ".zip")
 Expand-Archive -Path ($($system.Path) + "\NVIDIA_" + $($gpu.web_driver) + ".zip") -DestinationPath "$($system.Path)\ExtractedGPUDriver\"
-$extractedpath = Get-ChildItem -Path "$($system.Path)\ExtractedGPUDriver\" | Where-Object name -like '*win10*' | % name
-Rename-Item -Path "$($system.Path)\ExtractedGPUDriver\$extractedpath" -NewName "NVIDIA_$($gpu.web_driver).exe"
-Move-Item -Path "$($system.Path)\ExtractedGPUDriver\NVIDIA_$($gpu.web_driver).exe" -Destination $system.Path
-remove-item "$($system.Path)\NVIDIA_$($gpu.web_driver).zip"
-remove-item "$($system.Path)\ExtractedGPUDriver" -Recurse
+$extractedpath = Get-ChildItem -Filter *win10* -Recurse -Path "$($system.Path)\ExtractedGPUDriver\" | % FullName
+Move-Item -Path "$extractedpath" -Destination "$system.Path\NVIDIA_$($gpu.web_driver).exe"
+remove-item "$($system.Path)\NVIDIA_$($gpu.web_driver).zip" -Force
+remove-item "$($system.Path)\ExtractedGPUDriver" -Recurse -Force
 (New-Object System.Net.WebClient).DownloadFile("https://s3.amazonaws.com/nvidia-gaming/GridSwCert-Windows.cert", "C:\Users\Public\Documents\GridSwCert.txt")
 }
 Elseif ((($gpu.supported -eq "UnOfficial")  -and ($gpu.cloudprovider -eq "Google"))-eq $true) {
