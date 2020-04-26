@@ -1,10 +1,14 @@
 ﻿param (
-    [string]$Confirm = "true"
+    [string]$Confirm = "true",
+    [string]$DoNotReboot = "false"
 )
 
 #version=001
 #sets invoke-webrequest to use TLS1.2 by default
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Stop on errors (avoid unnecessary reboots)
+$ErrorActionPreference = "Stop"
 
 function waitForUserInput {
     If ($Confirm -eq "true") {
@@ -267,7 +271,7 @@ $S3Path = G4DN GPUUpdateG4Dn
 (New-Object System.Net.WebClient).DownloadFile($("https://nvidia-gaming.s3.amazonaws.com/" + $s3path), $($system.Path) + "\NVIDIA_" + $($gpu.web_driver) + ".zip")
 Expand-Archive -Path ($($system.Path) + "\NVIDIA_" + $($gpu.web_driver) + ".zip") -DestinationPath "$($system.Path)\ExtractedGPUDriver\"
 $extractedpath = Get-ChildItem -Filter *win10* -Recurse -Path "$($system.Path)\ExtractedGPUDriver\" | % FullName
-Move-Item -Path "$extractedpath" -Destination "$system.Path\NVIDIA_$($gpu.web_driver).exe"
+Move-Item -Path "$extractedpath" -Destination "$($system.Path)\NVIDIA_$($gpu.web_driver).exe"
 remove-item "$($system.Path)\NVIDIA_$($gpu.web_driver).zip" -Force
 remove-item "$($system.Path)\ExtractedGPUDriver" -Recurse -Force
 (New-Object System.Net.WebClient).DownloadFile("https://s3.amazonaws.com/nvidia-gaming/GridSwCert-Windows.cert", "C:\Users\Public\Documents\GridSwCert.txt")
@@ -318,35 +322,34 @@ return $false
 }
 
 function DisableSecondMonitor {
-#downloads script to set GPU to WDDM if required
-(New-Object System.Net.WebClient).DownloadFile("https://raw.githubusercontent.com/cloudrig/Cloud-GPU-Updater/master/Additional%20Files/DisableSecondMonitor.ps1", $($system.Path) + "\DisableSecondMonitor.ps1")
-Unblock-File -Path "$($system.Path)\DisableSecondMonitor.ps1"
+    #downloads script to set GPU to WDDM if required
+    (New-Object System.Net.WebClient).DownloadFile("https://raw.githubusercontent.com/cloudrig/Cloud-GPU-Updater/master/Additional%20Files/DisableSecondMonitor.ps1", $($system.Path) + "\DisableSecondMonitor.ps1")
+    Unblock-File -Path "$($system.Path)\DisableSecondMonitor.ps1"
 }
 
 function DisableSecondMonitor-shortcut{
-#creates startup shortcut that will start the script downloaded in setnvsmi
-Write-Output "Generic Non PNP Monitor"
-$Shell = New-Object -ComObject ("WScript.Shell")
-$ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\DisableSecondMonitor.lnk")
-$ShortCut.TargetPath="powershell.exe"
-$ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\DisableSecondMonitor.ps1"'
-$ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
-$ShortCut.WindowStyle = 0;
-$ShortCut.Description = "DisableSecondMonitor";
-$ShortCut.Save()
+    #creates startup shortcut that will start the script downloaded in setnvsmi
+    Write-Output "Generic Non PNP Monitor"
+    $Shell = New-Object -ComObject ("WScript.Shell")
+    $ShortCut = $Shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\DisableSecondMonitor.lnk")
+    $ShortCut.TargetPath="powershell.exe"
+    $ShortCut.Arguments='-WindowStyle hidden -ExecutionPolicy Bypass -File "C:\CloudRIGTemp\Drivers\DisableSecondMonitor.ps1"'
+    $ShortCut.WorkingDirectory = "C:\CloudRIGTemp\Drivers";
+    $ShortCut.WindowStyle = 0;
+    $ShortCut.Description = "DisableSecondMonitor";
+    $ShortCut.Save()
 }
 
 
 function installDriver {
-#installs driver silently with /s /n arguments provided by NVIDIA
-$DLpath = Get-ChildItem -Path $system.path -Include *exe* -Recurse | Select-Object -ExpandProperty Name
-Start-Process -FilePath "$($system.Path)\$dlpath" -ArgumentList "/s /n" -Wait 
-if((($gpu.Supported -eq "unOfficial") -and ($gpu.cloudprovider -eq "aws") -and ($gpu.Device_ID -eq "DEV_1EB8")) -eq $true){
-if((Test-RegistryValue -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -value 'vGamingMarketplace') -eq $true) {Set-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" | Out-Null} else {new-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" -PropertyType DWORD | Out-Null}
-DisableSecondMonitor
-DisableSecondMonitor-shortcut
-}
-Else{}
+    #installs driver silently with /s /n arguments provided by NVIDIA
+    $DLpath = Get-ChildItem -Path $system.path -Include *exe* -Recurse | Select-Object -ExpandProperty Name
+    Start-Process -FilePath "$($system.Path)\$dlpath" -ArgumentList "/s /n" -Wait
+    if((($gpu.Supported -eq "unOfficial") -and ($gpu.cloudprovider -eq "aws") -and ($gpu.Device_ID -eq "DEV_1EB8")) -eq $true){
+        if((Test-RegistryValue -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -value 'vGamingMarketplace') -eq $true) {Set-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" | Out-Null} else {new-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" -PropertyType DWORD | Out-Null}
+        DisableSecondMonitor
+        DisableSecondMonitor-shortcut
+    }
 }
 
 #setting up arrays below
@@ -364,32 +367,34 @@ $app.CloudRIG = Write-Host -foregroundcolor red "
 " 
 
 function rebootLogic {
-#checks if machine needs to be rebooted, and sets a startup item to set GPU mode to WDDM if required
-if ($system.OS_Reboot_Required -eq $true) {
-    if ($GPU.NV_GRID -eq $false)
-    {Write-Output "This computer needs to reboot in order to finish installing your driver Driver, and will reboot in 10 seconds"
-    start-sleep -s 10
-    Restart-Computer -Force} 
-    ElseIf ($GPU.NV_GRID -eq $true) {
-    Write-Output "This computer needs to reboot twice in order to correctly install the driver and set WDDM Mode"
-    setnvsmi
-    setnvsmi-shortcut
-    start-sleep -s 10
-    Restart-Computer -Force}
-    Else{}
-}
-Else {
-    if ($gpu.NV_GRID -eq $true) {
-    Write-Output "This computer needs to reboot twice in order to correctly install the driver and set WDDM Mode"
-    setnvsmi
-    setnvsmi-shortcut
-    start-sleep -s 10
-    Restart-Computer -Force}
-    ElseIf ($gpu.NV_GRID -eq $false) {
-    write-output "Your computer is ready to go and does not require a reboot :)"
+    if ($DoNotReboot -eq "false") {
+        #checks if machine needs to be rebooted, and sets a startup item to set GPU mode to WDDM if required
+        if ($system.OS_Reboot_Required -eq $true) {
+            if ($GPU.NV_GRID -eq $false) {
+                Write-Output "This computer needs to reboot in order to finish installing your driver Driver, and will reboot in 10 seconds"
+                start-sleep -s 10
+                Restart-Computer -Force
+
+            } ElseIf ($GPU.NV_GRID -eq $true) {
+                Write-Output "This computer needs to reboot twice in order to correctly install the driver and set WDDM Mode"
+                setnvsmi
+                setnvsmi-shortcut
+                start-sleep -s 10
+                Restart-Computer -Force
+            }
+        }
+        Else {
+            if ($gpu.NV_GRID -eq $true) {
+                Write-Output "This computer needs to reboot twice in order to correctly install the driver and set WDDM Mode"
+                setnvsmi
+                setnvsmi-shortcut
+                start-sleep -s 10
+                Restart-Computer -Force
+            } ElseIf ($gpu.NV_GRID -eq $false) {
+                write-output "Your computer is ready to go and does not require a reboot :)"
+            }
+        }
     }
-    Else{}
-}
 }
 
 function setnvsmi {
