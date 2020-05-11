@@ -346,6 +346,7 @@ function installDriver {
     $DLpath = Get-ChildItem -Path $system.path -Include *exe* -Recurse | Select-Object -ExpandProperty Name
     Start-Process -FilePath "$($system.Path)\$dlpath" -ArgumentList "/s /n" -Wait
     if((($gpu.Supported -eq "unOfficial") -and ($gpu.cloudprovider -eq "aws") -and ($gpu.Device_ID -eq "DEV_1EB8")) -eq $true){
+        Write-Host "Disabling the second screen..."
         if((Test-RegistryValue -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -value 'vGamingMarketplace') -eq $true) {Set-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" | Out-Null} else {new-itemproperty -path 'HKLM:\SOFTWARE\NVIDIA Corporation\Global' -Name "vGamingMarketplace" -Value "2" -PropertyType DWORD | Out-Null}
         DisableSecondMonitor
         DisableSecondMonitor-shortcut
